@@ -67,6 +67,7 @@ export async function getPulse(matterId: string): Promise<Pulse> {
 }
 
 const HEDGED = new Set(["inferred", "unknown"]);
+const BARE_AMOUNT = /^\$[\d,]+(\.\d+)?$/;
 
 export async function getDigest(matterId: string): Promise<Digest> {
   const insights = await latestInsights(matterId);
@@ -75,6 +76,8 @@ export async function getDigest(matterId: string): Promise<Digest> {
     summary: posture?.value ?? "No digest yet. Sync the matter to generate one.",
     keyFacts: insights
       .filter((i) => i.type !== "posture" && i.type !== "last_contact")
+      // A bare dollar figure (e.g. "Estimated Case Value: $375,000") is already a KPI tile.
+      .filter((i) => !BARE_AMOUNT.test(i.value.trim()))
       .map((i) => ({
         text: `${i.label}: ${i.value}${HEDGED.has(i.confidence) ? ` (${i.confidence})` : ""}`,
         sourceRecordIds: i.sourceRecordIds,

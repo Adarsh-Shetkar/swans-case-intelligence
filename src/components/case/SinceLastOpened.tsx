@@ -5,28 +5,31 @@ import { Card } from "@/components/ui/card";
 import { SourceChip } from "@/components/evidence/SourceChip";
 import { ago } from "@/lib/format";
 import type { TimelineEvent } from "@/lib/api-contract";
-import { useRef  } from "react";
 
+function readLastSeen(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+// Only rendered client-side (after the timeline fetch), so reading localStorage on init is safe.
 export function SinceLastOpened({ matterId, events }: { matterId: string; events: TimelineEvent[] }) {
-  const [since, setSince] = useState<string | null>(null);
   const key = `lastSeen:${matterId}`;
-  // inside the component:
-    const ran = useRef(false);
+  const [since] = useState(() => readLastSeen(key));
 
   useEffect(() => {
-  if (ran.current) return;
-  ran.current = true;
-  try {
-    setSince(localStorage.getItem(key));
-    localStorage.setItem("lastSeen:mock-1", new Date(Date.now() - 4 * 864e5).toISOString())
-  } catch {}
-}, [key]);
+    try {
+      localStorage.setItem(key, new Date().toISOString());
+    } catch {}
+  }, [key]);
 
   if (!since) return null; // first visit: nothing to compare against
   const fresh = events.filter((e) => new Date(e.occurredAt) > new Date(since));
 
   return (
-    <Card className="border-blue-200 bg-blue-50 p-4">
+    <Card className="border-indigo-200 bg-indigo-50/70 p-4">
       <h2 className="text-sm font-semibold">
         ✦ Since you last opened this ({ago(since)}): {fresh.length || "no"} change{fresh.length === 1 ? "" : "s"}
       </h2>
