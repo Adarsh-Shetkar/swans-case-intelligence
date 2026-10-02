@@ -1,14 +1,13 @@
 // src/lib/data/index.ts
+// DATA_SOURCE=clio reads Postgres (filled by POST /api/ingest); anything else serves mocks.
 import * as m from "@/lib/mocks";
+import * as live from "./live";
 
-const live = (): never => {
-  throw new Error("DATA_SOURCE=clio is not wired yet (Person A/B)");
-};
 const isLive = () => process.env.DATA_SOURCE === "clio";
 
-export const getPulse = async (_id: string) => (isLive() ? live() : m.pulse);
-export const getDigest = async (_id: string) => (isLive() ? live() : m.digest);
-export const getTimeline = async (_id: string) => (isLive() ? live() : m.timeline);
-export const getActions = async (_id: string) => (isLive() ? live() : m.actions);
-export const getEvidence = async (_id: string, ids: string[]) =>
-  isLive() ? live() : m.evidence.filter((r) => ids.includes(r.id));
+export const getPulse = async (id: string) => (isLive() ? live.getPulse(id) : m.pulse);
+export const getDigest = async (id: string) => (isLive() ? live.getDigest(id) : m.digest);
+export const getTimeline = async (id: string) => (isLive() ? live.getTimeline(id) : m.timeline);
+export const getActions = async (id: string) => (isLive() ? live.getActions(id) : m.actions);
+export const getEvidence = async (id: string, ids: string[]) =>
+  isLive() ? live.getEvidence(id, ids) : m.evidence.filter((r) => ids.includes(r.id));

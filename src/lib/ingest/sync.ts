@@ -33,6 +33,7 @@ export async function syncSapiniMatter() {
     displayNumber: clioMatter.display_number || matterId,
     status: clioMatter.status || 'open',
     description: clioMatter.description || null,
+    clientName: clioMatter.client?.name || null,
     estimatedValue: estimatedValueField?.value ? { raw: estimatedValueField.value } : undefined,
     lastSyncedAt: new Date(),
     rawSnapshotHash,
@@ -66,6 +67,7 @@ export async function syncSapiniMatter() {
           excerpt: record.excerpt,
           rawContent: record.rawContent,
           contentHash: record.contentHash,
+          status: record.status,
         },
         create: record,
       })

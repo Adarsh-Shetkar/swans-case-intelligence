@@ -8,7 +8,7 @@ const headers = {
 
 // Clio v4 only returns id/etag unless fields are requested explicitly.
 const FIELDS = {
-  matter: 'id,display_number,status,description,updated_at,custom_field_values{id,value,field_name}',
+  matter: 'id,display_number,status,description,updated_at,client{name},custom_field_values{id,value,field_name,field_type}',
   note: 'id,subject,detail,date,created_at,author{name}',
   communication: 'id,subject,body,type,date,created_at,senders{name},receivers{name}',
   task: 'id,name,description,status,due_at,created_at,assignee{name}',

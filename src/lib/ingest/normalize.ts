@@ -1,8 +1,9 @@
 import crypto from 'crypto';
+import { normalizeMatterFields } from '@/lib/ai/matter-fields';
 
 export interface NormalizedSourceRecord {
   matterId: string;
-  clioType: 'note' | 'communication' | 'task' | 'calendar' | 'document';
+  clioType: 'note' | 'communication' | 'task' | 'calendar' | 'document' | 'matter_field';
   clioId: string;
   occurredAt: Date;
   author: string | null;
@@ -10,6 +11,7 @@ export interface NormalizedSourceRecord {
   excerpt: string | null;
   rawContent: string;
   contentHash: string;
+  status?: string | null; // tasks only
 }
 
 function computeHash(content: string): string {
@@ -64,6 +66,7 @@ export function normalizeBundle(matterId: string, bundle: any): NormalizedSource
       excerpt: rawContent ? rawContent.slice(0, 150) : null,
       rawContent,
       contentHash: computeHash(`task:${t.id}:${rawContent}`),
+      status: t.status || null,
     });
   });
 
@@ -98,6 +101,17 @@ export function normalizeBundle(matterId: string, bundle: any): NormalizedSource
       contentHash: computeHash(`doc:${d.id}:${rawContent}`),
     });
   });
+
+  // Matter custom fields (case value, policy limits, specials, liens...)
+  if (bundle.matter) {
+    records.push(
+      ...normalizeMatterFields(
+        matterId,
+        bundle.matter.updated_at || new Date(),
+        bundle.matter.custom_field_values || []
+      ).map((f) => ({ ...f, matterId }))
+    );
+  }
 
   return records;
 }
