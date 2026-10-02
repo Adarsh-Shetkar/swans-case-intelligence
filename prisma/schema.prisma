@@ -16,6 +16,11 @@ model Matter {
   estimatedValue  Json?    // {min, max, source}
   lastSyncedAt    DateTime
   rawSnapshotHash String   // for incremental digest
+
+  sourceRecords  SourceRecord[]
+  caseEvents     CaseEvent[]
+  insights       Insight[]
+  providerShares ProviderShare[]
 }
 
 model SourceRecord {
@@ -30,7 +35,10 @@ model SourceRecord {
   rawContent  String?  // full text for AI processing
   contentHash String   // dedupe / incremental processing
 
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
   @@unique([matterId, clioType, clioId])
+  @@index([matterId, occurredAt])
 }
 
 model CaseEvent {
@@ -44,6 +52,10 @@ model CaseEvent {
   sourceRecordIds String[] // evidence links
   aiGenerated     Boolean  @default(true)
   digestVersion   Int
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
+  @@index([matterId, occurredAt])
 }
 
 model Insight {
@@ -55,6 +67,10 @@ model Insight {
   confidence      String   // observed|ai_synthesis|inferred
   sourceRecordIds String[]
   digestVersion   Int
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
+  @@index([matterId])
 }
 
 model ProviderShare {
@@ -63,4 +79,8 @@ model ProviderShare {
   providerId        String   // Clio contact ID
   visibleCategories String[] // allowlist: status|coverage|treatment|requests|records|bills|dates
   createdAt         DateTime @default(now())
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
+  @@index([matterId])
 }
