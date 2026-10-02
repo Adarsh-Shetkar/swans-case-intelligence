@@ -67,6 +67,14 @@ export interface CreateInsightInput {
   sourceRecordIds: string[];
 }
 
+export interface ExistingInsightRow {
+  type: string;
+  label: string;
+  value: string;
+  confidence: string;
+  sourceRecordIds: string[];
+}
+
 export interface DigestRepository {
   getMatterRecords(matterId: string): Promise<SourceRecordRow[]>;
 
@@ -84,6 +92,16 @@ export interface DigestRepository {
   updateCaseEvent(id: string, patch: UpdateCaseEventInput): Promise<void>;
 
   createInsight(input: CreateInsightInput): Promise<{ id: string }>;
+
+  /**
+   * Reads back the insights written at a specific past digestVersion. Used
+   * by run-digest.ts to carry forward LLM-derived insights (posture,
+   * injury, blocker, narrative coverage/financial commentary) when
+   * synthesizeInsights fails on the current run, so a transient AI failure
+   * doesn't make the matter's LATEST version look like it has no posture
+   * or injury information at all.
+   */
+  getInsightsAtVersion(matterId: string, version: number): Promise<ExistingInsightRow[]>;
 
   /** Marks each given record as digested, stamping its current contentHash as the new lastDigestedContentHash. */
   markRecordsDigested(sourceRecordIds: string[], contentHashById: Map<string, string>): Promise<void>;

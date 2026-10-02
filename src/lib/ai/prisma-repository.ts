@@ -3,6 +3,7 @@ import type {
   DigestRepository,
   SourceRecordRow,
   ExistingEventRow,
+  ExistingInsightRow,
   CreateCaseEventInput,
   UpdateCaseEventInput,
   CreateInsightInput,
@@ -132,6 +133,21 @@ export const prismaDigestRepository: DigestRepository = {
       },
     });
     return { id: row.id };
+  },
+
+  async getInsightsAtVersion(matterId: string, version: number): Promise<ExistingInsightRow[]> {
+    const rows = await prisma.insight.findMany({
+      where: { matterId, digestVersion: version },
+    });
+    return rows.map(
+      (r: { type: string; label: string; value: string; confidence: string; sourceRecordIds: string[] }): ExistingInsightRow => ({
+        type: r.type,
+        label: r.label,
+        value: r.value,
+        confidence: r.confidence,
+        sourceRecordIds: r.sourceRecordIds,
+      })
+    );
   },
 
   async markRecordsDigested(sourceRecordIds: string[], contentHashById: Map<string, string>): Promise<void> {

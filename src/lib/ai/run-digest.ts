@@ -2,6 +2,7 @@ import { planDigest, type DigestableRecord } from "./digest";
 import { categorizeAndRankEvents, titleSimilarity } from "./categorize";
 import { synthesizeInsights } from "./synthesize";
 import { computeLastContact } from "./compute-last-contact";
+import { computeMatterFieldInsights } from "./compute-matter-field-insights";
 import { config as geminiConfig } from "./gemini";
 import type { DigestRepository, SourceRecordRow } from "./repository";
 import type { RawRecordForPrompt } from "./prepare";
@@ -161,13 +162,42 @@ export async function runDigest(matterId: string, repo: DigestRepository): Promi
   const insightResult = await synthesizeInsights(matterId, allRaw);
 
   // last_contact is computed deterministically -- no LLM involved, zero
-  // cost, cannot hallucinate a date (see compute-last-contact.ts). It is
-  // always included alongside whatever the LLM produced for the other
-  // insight types.
+  // cost, cannot hallucinate a date (see compute-last-contact.ts).
   const lastContact = computeLastContact(
     records.map((r) => ({ id: r.id, clioType: r.clioType, occurredAt: r.occurredAt, subject: r.subject }))
   );
-  const allInsights = [...insightResult.insights, lastContact];
+
+  // Financial/coverage facts from Clio matter custom fields (Estimated Case
+  // Value, Policy Limits, Medical Specials To Date, Insurance Carrier,
+  // etc.) -- also deterministic, also zero LLM cost, also cannot
+  // hallucinate a dollar figure. See compute-matter-field-insights.ts.
+  const matterFieldRecords = records.map((r) => ({
+    id: r.id,
+    clioType: r.clioType,
+    subject: r.subject,
+    rawContent: r.rawContent,
+  }));
+  const fieldInsights = computeMatterFieldInsights(matterFieldRecords);
+
+  // Insights-wipe guard: if synthesis fails, insightResult.insights is [].
+  // Without this, the version we're about to write would contain ONLY
+  // last_contact + field insights, and since "current digest version" is
+  // MAX(CaseEvent.digestVersion, Insight.digestVersion), that failed run's
+  // version becomes the new "latest" -- silently hiding the previous
+  // version's posture/injury/blocker insights from anyone reading "insights
+  // at the latest version", even though nothing about those facts changed.
+  // Fix: on failure, carry the previous version's LLM-derived insights
+  // forward under the new version number, excluding labels this run's
+  // deterministic functions already produced (to avoid a stale duplicate
+  // sitting next to the fresh one).
+  let llmInsights = insightResult.insights;
+  if (insightResult.error && currentVersion > 0) {
+    const deterministicLabelsThisRun = new Set([lastContact.label, ...fieldInsights.map((f) => f.label)]);
+    const previous = await repo.getInsightsAtVersion(matterId, currentVersion);
+    llmInsights = previous.filter((i) => !deterministicLabelsThisRun.has(i.label));
+  }
+
+  const allInsights = [...llmInsights, lastContact, ...fieldInsights];
 
   for (const insight of allInsights) {
     await repo.createInsight({

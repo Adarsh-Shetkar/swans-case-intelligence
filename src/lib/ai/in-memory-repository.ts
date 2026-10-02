@@ -2,6 +2,7 @@ import type {
   DigestRepository,
   SourceRecordRow,
   ExistingEventRow,
+  ExistingInsightRow,
   CreateCaseEventInput,
   UpdateCaseEventInput,
   CreateInsightInput,
@@ -117,6 +118,18 @@ export class InMemoryDigestRepository implements DigestRepository {
     const id = this.id("insight");
     this.insights.push({ id, ...input });
     return { id };
+  }
+
+  async getInsightsAtVersion(matterId: string, version: number): Promise<ExistingInsightRow[]> {
+    return this.insights
+      .filter((i) => i.matterId === matterId && i.digestVersion === version)
+      .map((i) => ({
+        type: i.type,
+        label: i.label,
+        value: i.value,
+        confidence: i.confidence,
+        sourceRecordIds: i.sourceRecordIds,
+      }));
   }
 
   async markRecordsDigested(sourceRecordIds: string[], contentHashById: Map<string, string>): Promise<void> {
