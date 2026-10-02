@@ -4,7 +4,7 @@ import type { AiCallMeta, AiCallResult, CitableRecord } from "./types";
 import { AiValidationError } from "./types";
 import * as stub from "./stub";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-1.5-pro";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const USE_STUB = process.env.AI_USE_STUB === "true" || !process.env.GEMINI_API_KEY;
 
 let client: GoogleGenerativeAI | null = null;
@@ -19,6 +19,12 @@ function getClient(): GoogleGenerativeAI {
     client = new GoogleGenerativeAI(key);
   }
   return client;
+}
+
+// Thinking models bill their reasoning tokens as output, on top of the visible answer.
+function outputTokenCount(usage: { candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined) {
+  if (!usage) return undefined;
+  return (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0);
 }
 
 function stripCodeFence(text: string): string {
@@ -98,7 +104,7 @@ export async function generateStructured<T>(args: {
       data,
       model: MODEL,
       inputTokens: usage?.promptTokenCount,
-      outputTokens: usage?.candidatesTokenCount,
+      outputTokens: outputTokenCount(usage),
       durationMs: Date.now() - started,
       usedStub: false,
     };
@@ -116,7 +122,7 @@ export async function generateStructured<T>(args: {
       data,
       model: MODEL,
       inputTokens: usage?.promptTokenCount,
-      outputTokens: usage?.candidatesTokenCount,
+      outputTokens: outputTokenCount(usage),
       durationMs: Date.now() - started,
       usedStub: false,
     };
