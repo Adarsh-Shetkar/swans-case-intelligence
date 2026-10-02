@@ -13,9 +13,15 @@ model Matter {
   displayNumber   String
   status          String
   description     String?
+  clientName      String?
   estimatedValue  Json?    // {min, max, source}
   lastSyncedAt    DateTime
   rawSnapshotHash String   // for incremental digest
+
+  sourceRecords  SourceRecord[]
+  caseEvents     CaseEvent[]
+  insights       Insight[]
+  providerShares ProviderShare[]
 }
 
 model SourceRecord {
@@ -29,8 +35,13 @@ model SourceRecord {
   excerpt     String?
   rawContent  String?  // full text for AI processing
   contentHash String   // dedupe / incremental processing
+  lastDigestedContentHash String?
+  status      String?  // tasks only: pending | in_progress | in_review | complete
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
 
   @@unique([matterId, clioType, clioId])
+  @@index([matterId, occurredAt])
 }
 
 model CaseEvent {
@@ -44,6 +55,10 @@ model CaseEvent {
   sourceRecordIds String[] // evidence links
   aiGenerated     Boolean  @default(true)
   digestVersion   Int
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
+  @@index([matterId, occurredAt])
 }
 
 model Insight {
@@ -55,6 +70,10 @@ model Insight {
   confidence      String   // observed|ai_synthesis|inferred
   sourceRecordIds String[]
   digestVersion   Int
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
+  @@index([matterId])
 }
 
 model ProviderShare {
@@ -62,10 +81,14 @@ model ProviderShare {
   matterId          String
   providerName      String    @default("")
   providerId        String?   // optional Clio contact ID
-  visibleCategories String[]
+  visibleCategories String[]  // allowlist: status|coverage|treatment|requests|records|bills|dates
   requests          String[]
   createdAt         DateTime  @default(now())
   lastViewedAt      DateTime?
   viewCount         Int       @default(0)
   revokedAt         DateTime?
+
+  matter Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+
+  @@index([matterId])
 }
