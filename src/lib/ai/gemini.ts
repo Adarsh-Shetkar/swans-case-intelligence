@@ -4,9 +4,9 @@ import type { AiCallMeta, AiCallResult, CitableRecord } from "./types";
 import { AiValidationError } from "./types";
 import * as stub from "./stub";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 // Used only when the primary model stays overloaded after retries.
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash";
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.1-flash-lite";
 const RETRY_DELAYS_MS = [2000, 6000];
 const USE_STUB = process.env.AI_USE_STUB === "true" || !process.env.GEMINI_API_KEY;
 

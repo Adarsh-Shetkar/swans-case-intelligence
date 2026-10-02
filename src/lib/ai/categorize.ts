@@ -119,7 +119,10 @@ export async function categorizeAndRankEvents(
       // "skipped", or in neither.
       processed.push(...batchRecordIds);
     } catch (err) {
-      const message = err instanceof AiValidationError ? err.message : String(err);
+      const message =
+      err instanceof AiValidationError
+        ? `${err.message}: ${JSON.stringify(err.issues).slice(0, 400)}`
+        : String(err);
       errors.push({ chunkIndex: i, message });
       failed.push(...batchRecordIds);
     }

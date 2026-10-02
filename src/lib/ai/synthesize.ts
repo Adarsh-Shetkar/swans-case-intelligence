@@ -104,7 +104,10 @@ export async function synthesizeInsights(
       totalRecordCount: allRelevantRecords.length,
     };
   } catch (err) {
-    const message = err instanceof AiValidationError ? err.message : String(err);
+    const message =
+      err instanceof AiValidationError
+        ? `${err.message}: ${JSON.stringify(err.issues).slice(0, 400)}`
+        : String(err);
     // Fail soft: the caller (lib/ai/digest orchestration, step 6) logs this
     // as a failed ProcessingJob and simply keeps serving the previous
     // digest's insights rather than wiping them out because this run failed.
