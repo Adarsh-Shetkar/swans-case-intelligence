@@ -58,9 +58,14 @@ model Insight {
 }
 
 model ProviderShare {
-  id                String   @id @default(cuid())
+  id                String    @id // random token, set in code
   matterId          String
-  providerId        String   // Clio contact ID
-  visibleCategories String[] // allowlist: status|coverage|treatment|requests|records|bills|dates
-  createdAt         DateTime @default(now())
+  providerName      String    @default("")
+  providerId        String?   // optional Clio contact ID
+  visibleCategories String[]
+  requests          String[]
+  createdAt         DateTime  @default(now())
+  lastViewedAt      DateTime?
+  viewCount         Int       @default(0)
+  revokedAt         DateTime?
 }
