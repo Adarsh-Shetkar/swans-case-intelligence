@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Matter {
+  id              String   @id // Clio matter ID
+  clioId          String   @unique
+  displayNumber   String
+  status          String
+  description     String?
+  estimatedValue  Json?    // {min, max, source}
+  lastSyncedAt    DateTime
+  rawSnapshotHash String   // for incremental digest
+}
+
+model SourceRecord {
+  id          String   @id @default(cuid())
+  matterId    String
+  clioType    String   // note | communication | task | calendar | document
+  clioId      String
+  occurredAt  DateTime
+  author      String?
+  subject     String?
+  excerpt     String?
+  rawContent  String?  // full text for AI processing
+  contentHash String   // dedupe / incremental processing
+
+  @@unique([matterId, clioType, clioId])
+}
+
+model CaseEvent {
+  id              String   @id @default(cuid())
+  matterId        String
+  title           String
+  category        String   // treatment|surgery|coverage|liability|discovery|experts|negotiation|communication|damages|records|deadline
+  importance      Int      // 0-100, AI-scored
+  summary         String
+  occurredAt      DateTime
+  sourceRecordIds String[] // evidence links
+  aiGenerated     Boolean  @default(true)
+  digestVersion   Int
+}
+
+model Insight {
+  id              String   @id @default(cuid())
+  matterId        String
+  type            String   // posture|injury|last_contact|blocker|financial
+  label           String
+  value           String
+  confidence      String   // observed|ai_synthesis|inferred
+  sourceRecordIds String[]
+  digestVersion   Int
+}
+
+model ProviderShare {
+  id                String   @id @default(cuid())
+  matterId          String
+  providerId        String   // Clio contact ID
+  visibleCategories String[] // allowlist: status|coverage|treatment|requests|records|bills|dates
+  createdAt         DateTime @default(now())
+}
