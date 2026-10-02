@@ -29,6 +29,7 @@ model SourceRecord {
   excerpt     String?
   rawContent  String?  // full text for AI processing
   contentHash String   // dedupe / incremental processing
+  lastDigestedContentHash String?
 
   @@unique([matterId, clioType, clioId])
 }
