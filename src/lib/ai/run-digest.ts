@@ -20,6 +20,13 @@ export interface RunDigestResult {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Matter custom fields (see matter-fields.ts) describe case STATE (value,
+ * coverage, specials), not developments, and their occurredAt is the matter's
+ * updated_at. They feed insights, never the event timeline.
+ */
+const NON_EVENT_CLIO_TYPES: ReadonlySet<string> = new Set(["matter_field"]);
+
 function startOfUtcDay(d: Date | string): Date {
   const date = new Date(d);
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -97,7 +104,15 @@ export async function runDigest(matterId: string, repo: DigestRepository): Promi
   const newVersion = currentVersion + 1;
 
   // --- Events: additive, only on this run's delta ---
-  const changedRaw = plan.recordsForThisRun.map((r) => ({
+  // Non-event records (matter fields) are withheld from the event step. They
+  // still reach insight synthesis below via `records`, and are marked digested
+  // at the end so they don't keep the matter looking "changed" forever.
+  const eventCandidates = plan.recordsForThisRun.filter((r) => !NON_EVENT_CLIO_TYPES.has(r.clioType));
+  const nonEventIdsThisRun = plan.recordsForThisRun
+    .filter((r) => NON_EVENT_CLIO_TYPES.has(r.clioType))
+    .map((r) => r.sourceRecordId);
+
+  const changedRaw = eventCandidates.map((r) => ({
     sourceRecordId: r.sourceRecordId,
     clioType: r.clioType,
     occurredAt: r.occurredAt,
@@ -168,7 +183,10 @@ export async function runDigest(matterId: string, repo: DigestRepository): Promi
 
   // --- Mark records digested: only those that actually succeeded ---
   const failedSet = new Set(categorizeResult.failedSourceRecordIds);
-  const toMark = categorizeResult.processedSourceRecordIds.filter((id) => !failedSet.has(id));
+  const toMark = [
+    ...categorizeResult.processedSourceRecordIds.filter((id) => !failedSet.has(id)),
+    ...nonEventIdsThisRun,
+  ];
   if (toMark.length > 0) {
     const contentHashById = new Map(records.map((r) => [r.id, r.contentHash]));
     await repo.markRecordsDigested(toMark, contentHashById);

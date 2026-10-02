@@ -8,11 +8,15 @@ import { BLOCKER_KEYWORDS, matchesAnyKeyword } from "./keywords";
  * module-load-time side effects at all. src/lib/ai/actions.ts wraps this
  * with the actual DB read for API routes to call.
  *
- * CONVENTION (please read if you're Person A normalizing Clio data): for
- * `clioType === "task"` records, this treats `occurredAt` as the task's
- * DUE date, not its creation date. When normalizing Clio tasks into
- * SourceRecord, map Clio's task `due_at` field into `occurredAt` (not
- * `date_added` or similar) so overdue/upcoming classification is correct.
+ * CONVENTIONS (please read if you're Person A normalizing Clio data), for
+ * `clioType === "task"` records:
+ *   - `occurredAt` is the task's DUE date, not its creation date. Map Clio's
+ *     task `due_at` into `occurredAt` so overdue/upcoming is correct.
+ *   - `status` is Clio's task status (pending | in_progress | in_review |
+ *     complete). Completed tasks are dropped here: a finished task with a past
+ *     due date is history, not an overdue item. A null/missing status is
+ *     treated as open, so records ingested before this field existed behave
+ *     exactly as they did before.
  */
 
 export interface TaskLikeRecord {
@@ -21,6 +25,13 @@ export interface TaskLikeRecord {
   rawContent: string | null;
   author: string | null;
   occurredAt: Date;
+  status?: string | null;
+}
+
+const CLOSED_STATUSES: ReadonlySet<string> = new Set(["complete", "completed", "done", "closed"]);
+
+export function isTaskClosed(status: string | null | undefined): boolean {
+  return status != null && CLOSED_STATUSES.has(status.trim().toLowerCase());
 }
 
 function toTitle(r: TaskLikeRecord): string {
@@ -34,11 +45,13 @@ function byDueDateAsc(a: ActionItem, b: ActionItem): number {
 }
 
 /**
- * Classification order matters: a task whose text matches a blocker
- * keyword (e.g. "waiting on", "outstanding", "pending") is classified as
- * `waitingOn` REGARDLESS of its due date, because that's a statement about
- * being blocked on someone else, not a scheduling fact. Everything else
- * falls back to a pure date comparison against `now`.
+ * Classification order matters: closed tasks are dropped first, before any
+ * keyword matching, so a completed task whose text mentions "pending" can't
+ * resurface as waitingOn. Then a task whose text matches a blocker keyword
+ * (e.g. "waiting on", "outstanding", "pending") is `waitingOn` REGARDLESS of
+ * its due date, because that's a statement about being blocked on someone
+ * else, not a scheduling fact. Everything else falls back to a pure date
+ * comparison against `now`.
  */
 export function computeActions(records: TaskLikeRecord[], now: Date = new Date()): Actions {
   const overdue: ActionItem[] = [];
@@ -46,6 +59,8 @@ export function computeActions(records: TaskLikeRecord[], now: Date = new Date()
   const waitingOn: ActionItem[] = [];
 
   for (const r of records) {
+    if (isTaskClosed(r.status)) continue;
+
     const text = `${r.subject ?? ""} ${r.rawContent ?? ""}`;
     const item: ActionItem = {
       id: r.id,

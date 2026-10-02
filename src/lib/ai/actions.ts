@@ -15,12 +15,20 @@ export async function getActions(matterId: string): Promise<Actions> {
   });
 
   const taskRecords: TaskLikeRecord[] = records.map(
-    (r: { id: string; subject: string | null; rawContent: string | null; author: string | null; occurredAt: Date }) => ({
+    (r: {
+      id: string;
+      subject: string | null;
+      rawContent: string | null;
+      author: string | null;
+      occurredAt: Date;
+      status?: string | null;
+    }) => ({
       id: r.id,
       subject: r.subject,
       rawContent: r.rawContent,
       author: r.author,
       occurredAt: r.occurredAt,
+      status: r.status ?? null,
     })
   );
 

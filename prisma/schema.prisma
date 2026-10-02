@@ -30,7 +30,7 @@ model SourceRecord {
   rawContent  String?  // full text for AI processing
   contentHash String   // dedupe / incremental processing
   lastDigestedContentHash String?
-
+  status      String?  // tasks only: pending | in_progress | in_review | complete
   @@unique([matterId, clioType, clioId])
 }
 
