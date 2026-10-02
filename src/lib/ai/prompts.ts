@@ -78,8 +78,6 @@ supporting evidence yet):
 - posture: one sentence describing where the case currently stands overall
 - injury: the primary injuries evident from the records (one insight; value can list
   multiple body parts/conditions if the records support each one)
-- last_contact: the most recent SUBSTANTIVE contact with the client (a real
-  conversation, not an automated reminder), with the date
 - blocker: something the case cannot move forward on until a specific thing happens
   (e.g. a missing record, an unscheduled procedure, a pending response)
 - financial: a concise statement of known case value / specials / firm expenses, each

@@ -53,29 +53,10 @@ function stubCategorizeEvents(records: CitableRecord[]) {
 function stubSynthesizeInsights(records: CitableRecord[]) {
   const insights: Record<string, unknown>[] = [];
 
-  const communications = records
-    .filter((r) => r.clioType === "communication")
-    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
-
-  insights.push(
-    communications.length > 0
-      ? {
-          type: "last_contact",
-          label: "Last client contact",
-          value: `${communications[0].occurredAt}${
-            communications[0].subject ? ` — ${communications[0].subject}` : ""
-          }`,
-          confidence: "observed",
-          sourceRefs: [communications[0].ref],
-        }
-      : {
-          type: "last_contact",
-          label: "Last client contact",
-          value: "No communication records found",
-          confidence: "unknown",
-          sourceRefs: [],
-        }
-  );
+  // last_contact is deliberately NOT produced here -- it's computed
+  // deterministically by compute-last-contact.ts in both stub and real
+  // modes (see run-digest.ts), matching the real pipeline's prompt, which
+  // no longer asks the model for it either.
 
   const injuryRecord = records.find((r) =>
     INJURY_KEYWORDS.some((k) => r.content.toLowerCase().includes(k))

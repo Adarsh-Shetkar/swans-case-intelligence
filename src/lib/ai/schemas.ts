@@ -30,14 +30,12 @@ export const EventCategory = z.enum([
 ]);
 export type EventCategoryT = z.infer<typeof EventCategory>;
 
-export const InsightType = z.enum([
-  "posture",
-  "injury",
-  "last_contact",
-  "blocker",
-  "financial",
-  "coverage",
-]);
+// "last_contact" is computed deterministically now (see
+// compute-last-contact.ts), NOT requested from the LLM. It stays in this
+// shared enum for type consistency with that deterministic output, and as
+// a defensive filter target in synthesize.ts in case a model produces one
+// anyway despite the prompt no longer asking for it.
+export const InsightType = z.enum(["posture", "injury", "last_contact", "blocker", "financial", "coverage"]);
 export type InsightTypeT = z.infer<typeof InsightType>;
 
 export const ConfidenceLevel = z.enum(["observed", "ai_synthesis", "inferred", "unknown"]);

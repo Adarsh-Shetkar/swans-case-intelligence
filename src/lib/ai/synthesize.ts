@@ -66,7 +66,13 @@ export async function synthesizeInsights(
       records: batch,
     });
 
-    const insights: SynthesizedInsight[] = result.data.insights.map((draft) => {
+    // "last_contact" is computed deterministically by run-digest.ts (see
+    // compute-last-contact.ts) and is no longer requested in the prompt --
+    // drop it defensively if a model produces one anyway, so run-digest.ts
+    // never has to reconcile two different last_contact claims.
+    const filteredDrafts = result.data.insights.filter((d) => d.type !== "last_contact");
+
+    const insights: SynthesizedInsight[] = filteredDrafts.map((draft) => {
       const sourceRecordIds = resolveRefs(draft.sourceRefs, refToId);
 
       // The schema only requires sourceRefs to be non-empty when confidence

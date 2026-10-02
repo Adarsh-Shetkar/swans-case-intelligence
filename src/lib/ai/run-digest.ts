@@ -1,6 +1,7 @@
 import { planDigest, type DigestableRecord } from "./digest";
 import { categorizeAndRankEvents, titleSimilarity } from "./categorize";
 import { synthesizeInsights } from "./synthesize";
+import { computeLastContact } from "./compute-last-contact";
 import { config as geminiConfig } from "./gemini";
 import type { DigestRepository, SourceRecordRow } from "./repository";
 import type { RawRecordForPrompt } from "./prepare";
@@ -144,7 +145,16 @@ export async function runDigest(matterId: string, repo: DigestRepository): Promi
   const allRaw = records.map(toRawRecord);
   const insightResult = await synthesizeInsights(matterId, allRaw);
 
-  for (const insight of insightResult.insights) {
+  // last_contact is computed deterministically -- no LLM involved, zero
+  // cost, cannot hallucinate a date (see compute-last-contact.ts). It is
+  // always included alongside whatever the LLM produced for the other
+  // insight types.
+  const lastContact = computeLastContact(
+    records.map((r) => ({ id: r.id, clioType: r.clioType, occurredAt: r.occurredAt, subject: r.subject }))
+  );
+  const allInsights = [...insightResult.insights, lastContact];
+
+  for (const insight of allInsights) {
     await repo.createInsight({
       matterId,
       type: insight.type,
@@ -176,7 +186,7 @@ export async function runDigest(matterId: string, repo: DigestRepository): Promi
     reason: plan.reason,
     eventsCreated,
     eventsMerged,
-    insightsWritten: insightResult.insights.length,
+    insightsWritten: allInsights.length,
     errors,
     usage: {
       inputTokens: categorizeResult.usage.inputTokens + insightResult.usage.inputTokens,
