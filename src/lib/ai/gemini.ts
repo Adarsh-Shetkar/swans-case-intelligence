@@ -5,6 +5,9 @@ import { AiValidationError } from "./types";
 import * as stub from "./stub";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Used only when the primary model stays overloaded after retries.
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash";
+const RETRY_DELAYS_MS = [2000, 6000];
 const USE_STUB = process.env.AI_USE_STUB === "true" || !process.env.GEMINI_API_KEY;
 
 let client: GoogleGenerativeAI | null = null;
@@ -19,6 +22,39 @@ function getClient(): GoogleGenerativeAI {
     client = new GoogleGenerativeAI(key);
   }
   return client;
+}
+
+function isTransient(err: unknown): boolean {
+  return /\[(429|500|502|503|504) /.test(String(err)) || /overloaded|high demand/i.test(String(err));
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Rides out provider overload (429/5xx): retries the primary model with
+ * backoff, then tries the fallback model once. Non-transient errors throw
+ * immediately.
+ */
+async function generateWithRetry(promptText: string) {
+  const models = FALLBACK_MODEL && FALLBACK_MODEL !== MODEL ? [MODEL, FALLBACK_MODEL] : [MODEL];
+  let lastErr: unknown;
+  for (const name of models) {
+    const model = getClient().getGenerativeModel({
+      model: name,
+      generationConfig: { responseMimeType: "application/json" },
+    });
+    const delays = name === MODEL ? RETRY_DELAYS_MS : [];
+    for (let i = 0; i <= delays.length; i++) {
+      try {
+        return { result: await model.generateContent(promptText), model: name };
+      } catch (err) {
+        if (!isTransient(err)) throw err;
+        lastErr = err;
+        if (i < delays.length) await sleep(delays[i]);
+      }
+    }
+  }
+  throw lastErr;
 }
 
 // Thinking models bill their reasoning tokens as output, on top of the visible answer.
@@ -74,13 +110,11 @@ export async function generateStructured<T>(args: {
     };
   }
 
-  const model = getClient().getGenerativeModel({
-    model: MODEL,
-    generationConfig: { responseMimeType: "application/json" },
-  });
+  let modelUsed = MODEL;
 
   const attempt = async (promptText: string) => {
-    const result = await model.generateContent(promptText);
+    const { result, model } = await generateWithRetry(promptText);
+    modelUsed = model;
     const text = stripCodeFence(result.response.text());
 
     let parsedJson: unknown;
@@ -102,7 +136,7 @@ export async function generateStructured<T>(args: {
     const { data, usage } = await attempt(prompt);
     return {
       data,
-      model: MODEL,
+      model: modelUsed,
       inputTokens: usage?.promptTokenCount,
       outputTokens: outputTokenCount(usage),
       durationMs: Date.now() - started,
@@ -120,7 +154,7 @@ export async function generateStructured<T>(args: {
     const { data, usage } = await attempt(correctivePrompt);
     return {
       data,
-      model: MODEL,
+      model: modelUsed,
       inputTokens: usage?.promptTokenCount,
       outputTokens: outputTokenCount(usage),
       durationMs: Date.now() - started,
@@ -129,4 +163,4 @@ export async function generateStructured<T>(args: {
   }
 }
 
-export const config = { MODEL, USE_STUB };
+export const config = { MODEL, FALLBACK_MODEL, USE_STUB };
