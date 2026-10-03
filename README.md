@@ -1,4 +1,21 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Case Intelligence Dashboard
+
+Full-stack dashboard for personal-injury firms. Reads a live matter from the Clio Manage API
+(read-only OAuth) and condenses notes, emails and documents into a source-linked AI case digest,
+KPI row and ranked timeline. Includes a provider-sharing portal with revocable links.
+
+**Team of 3.** Original repo: (https://github.com/keethu12345/swans-case-intelligence)
+**My contribution:** project scaffold, Prisma/Postgres schema, typed API contract, frontend
+(dashboard, evidence drawer, timeline, action center) and the provider-sharing portal.
+
+## Stack
+Next.js, TypeScript, Tailwind, shadcn/ui, PostgreSQL, Prisma, Zod, Clio Manage API, Gemini
+
+## Run locally
+1. `npm install`
+2. Copy `.env.example` to `.env` and `.env.local`, then fill in the values (names only are listed)
+3. `npx prisma db push && npx prisma generate`
+4. `npm run dev`
 
 ## Getting Started
 
