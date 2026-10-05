@@ -2,7 +2,12 @@
 
 Full-stack dashboard for personal-injury firms. Reads a live matter from the Clio Manage API
 (read-only OAuth) and condenses notes, emails and documents into a source-linked AI case digest,
-KPI row and ranked timeline. Includes a provider-sharing portal with revocable links.
+KPI row and ranked timeline. Includes a provider-sharing portal with revocable links.<br>
+Project Link: https://lawdashboardd.netlify.app
+
+<img width="2940" height="1400" alt="image" src="https://github.com/user-attachments/assets/0359ac8f-8059-4620-bafb-c32892a6ad80" />
+<img width="2390" height="1758" alt="image" src="https://github.com/user-attachments/assets/baef84e0-dc93-4f93-a15e-5bb44cb3cf35" />
+
 
 **Team of 3.** Original repo: (https://github.com/keethu12345/swans-case-intelligence)
 **My contribution:** project scaffold, Prisma/Postgres schema, typed API contract, frontend
